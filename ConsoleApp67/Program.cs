@@ -251,6 +251,7 @@ namespace ConsoleApp67
         }
 
 
+ 
         [Benchmark]
         unsafe public static void SIMD()
         {
