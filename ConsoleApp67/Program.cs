@@ -76,7 +76,7 @@ namespace ConsoleApp67
             for (int i = 0; i < 1000000; i++)
             {
                 ab[i] = r.Next(0, 1000000);
-            }
+            }   
 
             for (int i = 0; i < 1000000; i++)
             {
