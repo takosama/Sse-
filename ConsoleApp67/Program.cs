@@ -93,7 +93,7 @@ namespace ConsoleApp67
         public AlignmentedArray(int Lng, int Alignment)
         {
             int n = (int)(Math.Ceiling(((double)(Alignment)) / Marshal.SizeOf<T>()));
-            this.TArray = new T[n + Lng];
+             this.TArray = new T[n + Lng];
            var Handle= GCHandle.Alloc(this.TArray, GCHandleType.Pinned);
             this.handle = Handle;
 
@@ -135,14 +135,18 @@ namespace ConsoleApp67
 
     public class test
     {
+        static int x = 160;
+        static int y =80;
+        static int ArraySize = x * y * 4;
+
         [Benchmark]
 
         unsafe public static void Nomal()
         {
-            byte[] img = new byte[1920 * 1080 * 4];
-            byte[] canvus = new byte[1920 * 1080 * 4];
-            int h = 1080;
-            int w = 1920;
+            byte[] img = new byte[ArraySize];
+            byte[] canvus = new byte[ArraySize];
+            int h =y ;
+            int w = x;
             fixed (byte* ptr = &img[0])
             fixed (byte* p = &canvus[0])
             {
@@ -174,10 +178,10 @@ namespace ConsoleApp67
 
         unsafe public static void NomalParallel()
         {
-            byte[] img = new byte[1920 * 1080 * 4];
-            byte[] canvus = new byte[1920 * 1080 * 4];
-            int h = 1080 ;
-            int w = 1920;
+            byte[] img = new byte[ArraySize];
+            byte[] canvus = new byte[ArraySize];
+            int h = y;
+            int w = x;
             fixed (byte* ptr = &img[0])
             fixed (byte* p = &canvus[0])
             {
@@ -212,8 +216,8 @@ namespace ConsoleApp67
 
         unsafe public static void SIMDParallel()
         {
-            byte[] img = new byte[1920 * 1080 * 4];
-            byte[] canvus = new byte[1920 * 1080 * 4];
+            byte[] img = new byte[ArraySize];
+            byte[] canvus = new byte[ArraySize];
 
             fixed (byte* ptr = &img[0])
             fixed (byte* p = &canvus[0])
@@ -227,8 +231,8 @@ namespace ConsoleApp67
                 var ppprt = ptr;
 
                 var ppp = p;
-                int h = 1080;
-                int w = 1920;
+                int h =y ;
+                int w = x;
                 Vector128<float> r = Sse.SetVector128(.333f, .333f, .333f, .333f);
                 Vector128<float> g = Sse.SetVector128(.666f, .666f, .666f, .666f);
                 Vector128<float> b = Sse.SetVector128(.112f, .112f, .112f, .112f);
@@ -271,8 +275,8 @@ namespace ConsoleApp67
         [Benchmark]
         unsafe public static void SIMDAVXParallell()
         {
-            byte[] img = new byte[1920 * 1080 * 4];
-            byte[] canvus = new byte[1920 * 1080 * 4];
+            byte[] img = new byte[ArraySize];
+            byte[] canvus = new byte[ArraySize];
            fixed (byte* ptr = &img[0])
             fixed (byte* p = &canvus[0])
             {
@@ -285,8 +289,8 @@ namespace ConsoleApp67
                 var ppprt = ptr;
 
                 var ppp = p;
-                int h = 1080;
-                int w = 1920;
+                int h =y ;
+                int w = x;
                 Vector256<float> r = Avx.SetVector256(.333f, .333f, .333f, .333f, .333f, .333f, .333f, .333f);
                 Vector256<float> g = Avx.SetVector256(.666f, .666f, .666f, .666f, .666f, .666f, .666f, .666f);
                 Vector256<float> b = Avx.SetVector256(.112f, .112f, .112f, .112f, .112f, .112f, .112f, .112f);
@@ -352,8 +356,8 @@ namespace ConsoleApp67
         [Benchmark]
         unsafe public static void AlignmentedSIMDAVXParallell()
         {
-            AlignmentedArray<byte> img = new AlignmentedArray<byte>(1920 * 1080 * 4, 256);
-            AlignmentedArray<byte> canvus = new AlignmentedArray<byte>(1920 * 1080 * 4, 256);
+            AlignmentedArray<byte> img = new AlignmentedArray<byte>(ArraySize, 256);
+            AlignmentedArray<byte> canvus = new AlignmentedArray<byte>(ArraySize, 256);
             var ptr = img.Pointer;
             var p = canvus.Pointer;
             {
@@ -366,8 +370,8 @@ namespace ConsoleApp67
                 var ppprt = ptr;
 
                 var ppp = p;
-                int h = 1080;
-                int w = 1920;
+                int h =y ;
+                int w = x;
                 Vector256<float> r = Avx.SetVector256(.333f, .333f, .333f, .333f, .333f, .333f, .333f, .333f);
                 Vector256<float> g = Avx.SetVector256(.666f, .666f, .666f, .666f, .666f, .666f, .666f, .666f);
                 Vector256<float> b = Avx.SetVector256(.112f, .112f, .112f, .112f, .112f, .112f, .112f, .112f);
@@ -436,8 +440,8 @@ namespace ConsoleApp67
 
         unsafe public static void SIMD()
         {
-            byte[] img = new byte[1920 * 1080 * 4];
-            byte[] canvus = new byte[1920 * 1080 * 4];
+            byte[] img = new byte[ArraySize];
+            byte[] canvus = new byte[ArraySize];
 
             fixed (byte* ptr = &img[0])
             fixed (byte* p = &canvus[0])
@@ -451,8 +455,8 @@ namespace ConsoleApp67
                 var pprt = ptr;
 
                 var pp = p;
-                int h = 1080;
-                int w = 1920;
+                int h =y ;
+                int w = x;
                 Vector128<float> r = Sse.SetVector128(.333f, .333f, .333f, .333f);
                 Vector128<float> g = Sse.SetVector128(.666f, .666f, .666f, .666f);
                 Vector128<float> b = Sse.SetVector128(.112f, .112f, .112f, .112f);
