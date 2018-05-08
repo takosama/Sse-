@@ -6,6 +6,11 @@ using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics;
 using System.Runtime.InteropServices;
 
+
+
+
+
+
 /*
  * BenchmarkDotNet=v0.10.14, OS=Windows 10.0.16299.371 (1709/FallCreatorsUpdate/Redstone3)
 Intel Core i7-4710MQ CPU 2.50GHz (Haswell), 1 CPU, 8 logical and 4 physical cores
@@ -22,6 +27,11 @@ Frequency=2435767 Hz, Resolution=410.5483 ns, Timer=TSC
   SIMDParallel |    661.9 us |  21.73 us |  64.08 us |    639.2 us |
           SIMD |  7,318.6 us |  22.85 us |  20.26 us |  7,317.7 us |
           */
+
+
+
+
+
 namespace ConsoleApp67
 
 {
