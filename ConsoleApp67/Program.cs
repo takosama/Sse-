@@ -35,17 +35,108 @@ Frequency=2435767 Hz, Resolution=410.5483 ns, Timer=TSC
 namespace ConsoleApp67
 
 {
-    class Program
+    public class Program
     {
-        unsafe static void Main(string[] args)
-        { 
+
+        static void Main(string[] args)
+        {
+            test.AlignmentedSIMDAVXParallell();
             BenchmarkDotNet.Running.BenchmarkRunner.Run<test>();
+       //     Console.WriteLine(ArrayTest.aa[0]);
         }
+    }
+
+    public class ArrayTest
+    {
+
+        [Benchmark]
+        static public void TestNomalArray()
+        {
+            int[] a = new int[1000000];
+            int[] b = new int[1000000];
+            Random r = new Random();
+            for (int i = 0; i < 1000000; i++)
+            {
+                b[i] = r.Next(0, 1000000);
+            }
+
+            for (int i = 0; i < 1000000; i++)
+            {
+                a[b[i]] = a[b[i]] + 1;
+            }
+        }
+
+        [Benchmark]
+        static public void TestAlignmentedArray()
+        {
+            AlignmentedArray<int> aa = new AlignmentedArray<int>(1000000, 128);
+            AlignmentedArray<int> ab = new AlignmentedArray<int>(1000000, 128);
+            Random r = new Random();
+
+            for (int i = 0; i < 1000000; i++)
+            {
+                ab[i] = r.Next(0, 1000000);
+            }
+
+            for (int i = 0; i < 1000000; i++)
+            {
+               aa[ ab[i]] = aa[ ab[i]] + 1;
+            }
+        }
+    }
+
+    public unsafe class AlignmentedArray<T> where T : unmanaged
+    {
+        T[] TArray = null;
+        T* ArrayZero = null;
+        GCHandle handle;
+        public AlignmentedArray(int Lng, int Alignment)
+        {
+            int n = (int)(Math.Ceiling(((double)(Alignment)) / Marshal.SizeOf<T>()));
+            this.TArray = new T[n + Lng];
+           var Handle= GCHandle.Alloc(this.TArray, GCHandleType.Pinned);
+            this.handle = Handle;
+
+            long lngPtr = this.handle.AddrOfPinnedObject().ToInt64();
+            lngPtr = lngPtr % Alignment == 0 ? lngPtr : lngPtr + Alignment - lngPtr % Alignment;
+            var StartPtr = new IntPtr(lngPtr);
+            this.ArrayZero = (T*)StartPtr.ToPointer();
+        }
+        public T this[int n]
+        {
+            set
+            {
+                *(ArrayZero + n) = value;
+            }
+            get
+            {
+                return *(this.ArrayZero + n);
+            }
+        }
+
+       public T* Pointer
+        {
+            get
+            {
+                return this.ArrayZero;
+            }
+        }
+    
+       public void Dispose()
+       {
+            this.handle.Free();
+       }
+      
+       ~AlignmentedArray()
+       {
+           Dispose();
+       }
     }
 
     public class test
     {
         [Benchmark]
+
         unsafe public static void Nomal()
         {
             byte[] img = new byte[1920 * 1080 * 4];
@@ -79,8 +170,8 @@ namespace ConsoleApp67
                 }
             }
         }
-
         [Benchmark]
+
         unsafe public static void NomalParallel()
         {
             byte[] img = new byte[1920 * 1080 * 4];
@@ -102,8 +193,8 @@ namespace ConsoleApp67
                 
                 Parallel.For(0, h, y =>
                 {
-                    var pprt = ppprt + 4 * y + w;
-                    var pp = ppp + 4 * y + w;
+                    var pprt = ppprt + 4 * y * w;
+                    var pp = ppp + 4 * y * w;
                     for (int x = 0; x < w; x ++)
                     {
                         byte l = (byte)(0.2*pprt[0] +0.6* pprt[0] +0.1* pprt[0]);
@@ -117,8 +208,8 @@ namespace ConsoleApp67
             }
         }
 
-
         [Benchmark]
+
         unsafe public static void SIMDParallel()
         {
             byte[] img = new byte[1920 * 1080 * 4];
@@ -148,8 +239,8 @@ namespace ConsoleApp67
 
                 Parallel.For(0, h, y =>
                    {
-                       var pprt = ppprt + 4 * y + w;
-                       var pp = ppp + 4 * y + w;
+                       var pprt = ppprt + 4 * y * w;
+                       var pp = ppp + 4 * y * w;
                        for (int x = 0; x < w; x += 4)
                        {
                            var tmp0 = Sse.StaticCast<byte, sbyte>(Sse2.LoadVector128(pprt));
@@ -182,8 +273,7 @@ namespace ConsoleApp67
         {
             byte[] img = new byte[1920 * 1080 * 4];
             byte[] canvus = new byte[1920 * 1080 * 4];
-
-            fixed (byte* ptr = &img[0])
+           fixed (byte* ptr = &img[0])
             fixed (byte* p = &canvus[0])
             {
                 //ばぐとりようの数字
@@ -210,16 +300,15 @@ namespace ConsoleApp67
                     Vector256<sbyte> datg = Avx.SetZeroVector256<sbyte>();
                     Vector256<sbyte> datb = Avx.SetZeroVector256<sbyte>();
                     Vector256<sbyte> rtn = Avx.SetZeroVector256<sbyte>();
-
-                    var pprt = ppprt + 4 * y + w;
-                    var pp = ppp + 4 * y + w;
+              
+                    var pprt = ppprt + 4 * y * w;
+                    var pp = ppp + 4 * y * w;
                     for (int x = 0; x < w; x += 8)
                     {
                         var tmp00 = Avx.StaticCast<byte, sbyte>(Avx.LoadVector256(pprt));
                         pprt += 32;
                         var tmp0 = Avx2.ExtractVector128(tmp00, 0);
                         var tmp1 = Avx2.ExtractVector128(tmp00, 1);
-
 
                         var t00 = Ssse3.Shuffle(tmp0, maskr);
                         var t01 = Ssse3.Shuffle(tmp0, maskg);
@@ -260,9 +349,91 @@ namespace ConsoleApp67
             }
         }
 
-
- 
         [Benchmark]
+        unsafe public static void AlignmentedSIMDAVXParallell()
+        {
+            AlignmentedArray<byte> img = new AlignmentedArray<byte>(1920 * 1080 * 4, 256);
+            AlignmentedArray<byte> canvus = new AlignmentedArray<byte>(1920 * 1080 * 4, 256);
+            var ptr = img.Pointer;
+            var p = canvus.Pointer;
+            {
+                //ばぐとりようの数字
+                for (int i = 0; i < 255; i++)
+                {
+
+                    img[i] = (byte)i;
+                }
+                var ppprt = ptr;
+
+                var ppp = p;
+                int h = 1080;
+                int w = 1920;
+                Vector256<float> r = Avx.SetVector256(.333f, .333f, .333f, .333f, .333f, .333f, .333f, .333f);
+                Vector256<float> g = Avx.SetVector256(.666f, .666f, .666f, .666f, .666f, .666f, .666f, .666f);
+                Vector256<float> b = Avx.SetVector256(.112f, .112f, .112f, .112f, .112f, .112f, .112f, .112f);
+                Vector128<sbyte> maskr = Sse2.SetVector128(-1, -1, -1, 12, -1, -1, -1, 8, -1, -1, -1, 4, -1, -1, -1, 0);
+                Vector128<sbyte> maskg = Sse2.SetVector128(-1, -1, -1, 13, -1, -1, -1, 9, -1, -1, -1, 5, -1, -1, -1, 1);
+                Vector128<sbyte> maskb = Sse2.SetVector128(-1, -1, -1, 14, -1, -1, -1, 10, -1, -1, -1, 6, -1, -1, -1, 2);
+                Vector128<sbyte> maskrtn = Sse2.SetVector128(-1, 12, 12, 12, -1, 8, 8, 8, -1, 4, 4, 4, -1, 0, 0, 0);
+                Parallel.For(0, h, y =>
+              //  for (int y = 0; y < h; y++)
+                {
+                    Vector256<sbyte> datr = Avx.SetZeroVector256<sbyte>();
+                    Vector256<sbyte> datg = Avx.SetZeroVector256<sbyte>();
+                    Vector256<sbyte> datb = Avx.SetZeroVector256<sbyte>();
+                    Vector256<sbyte> rtn = Avx.SetZeroVector256<sbyte>();
+
+                    var pprt = ppprt + 4 * y*w;
+                    var pp = ppp + 4 * y *w;
+                    for (int x = 0; x < w; x += 8)
+                    {
+                        var tmp00 = Avx.StaticCast<byte, sbyte>(Avx.LoadAlignedVector256(pprt));
+                        pprt += 32;
+                        var tmp0 = Avx2.ExtractVector128(tmp00, 0);
+                        var tmp1 = Avx2.ExtractVector128(tmp00, 1);
+
+                        var t00 = Ssse3.Shuffle(tmp0, maskr);
+                        var t01 = Ssse3.Shuffle(tmp0, maskg);
+                        var t02 = Ssse3.Shuffle(tmp0, maskb);
+
+                        var t10 = Ssse3.Shuffle(tmp1, maskr);
+                        var t11 = Ssse3.Shuffle(tmp1, maskg);
+                        var t12 = Ssse3.Shuffle(tmp1, maskb);
+                        Avx.InsertVector128(datr, t00, 0);
+                        Avx.InsertVector128(datr, t10, 1);
+                        Avx.InsertVector128(datg, t01, 0);
+                        Avx.InsertVector128(datg, t11, 1);
+                        Avx.InsertVector128(datb, t02, 0);
+                        Avx.InsertVector128(datb, t12, 1);
+
+                        var tmp8 = Avx.ConvertToVector256Single(Avx.StaticCast<sbyte, int>(datr));
+                        var tmp9 = Avx.ConvertToVector256Single(Avx.StaticCast<sbyte, int>(datg));
+                        var tmp10 = Avx.ConvertToVector256Single(Avx.StaticCast<sbyte, int>(datb));
+
+
+                        var tmp13 = Avx.Add(Avx.Add(Avx.Multiply(tmp8, r), Avx.Multiply(tmp9, g)), Avx.Multiply(tmp10, b));
+
+                        var tmp14 = Avx.StaticCast<int, sbyte>(Avx.ConvertToVector256Int32(tmp13));
+
+                        var tmp15 = Avx2.ExtractVector128(tmp14, 0);
+                        var tmp16 = Avx2.ExtractVector128(tmp14, 1);
+                        var tmp18 = Ssse3.Shuffle(tmp15, maskrtn);
+                        var tmp19 = Ssse3.Shuffle(tmp16, maskrtn);
+
+                        Avx.InsertVector128(rtn, tmp18, 0);
+                        Avx.InsertVector128(rtn, tmp19, 1);
+
+
+                        Avx.StoreAligned(pp, Avx.StaticCast<sbyte, byte>(rtn));
+                        pp += 32;
+                    }
+                });
+                
+            }
+        }
+
+        [Benchmark]
+
         unsafe public static void SIMD()
         {
             byte[] img = new byte[1920 * 1080 * 4];

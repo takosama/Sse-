@@ -9,6 +9,7 @@
     <Optimize>false</Optimize>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -16,6 +17,7 @@
     <Optimize>true</Optimize>
     <PlatformTarget>x64</PlatformTarget>
     <DefineConstants>RELEASE;NETCOREAPP;NETCOREAPP2_1;RELEASE;NETCOREAPP;NETCOREAPP2_1;RELEASE;NETCOREAPP;NETCOREAPP2_1</DefineConstants>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
