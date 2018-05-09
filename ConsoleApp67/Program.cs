@@ -133,19 +133,19 @@ namespace ConsoleApp67
        }
     }
 
-    public class test
+    unsafe public class test
     {
         static int _x = 1920;
-        static int _y =1080;
+        static int _y = 1080;
         static int ArraySize = _x * _y * 4;
-
+        volatile static sbyte Fetch = 0;
         [Benchmark]
 
         unsafe public static void Nomal()
         {
             byte[] img = new byte[ArraySize];
             byte[] canvus = new byte[ArraySize];
-            int h =_y ;
+            int h = _y;
             int w = _x;
             fixed (byte* ptr = &img[0])
             fixed (byte* p = &canvus[0])
@@ -160,8 +160,8 @@ namespace ConsoleApp67
 
                 var pp = p;
 
-                for(int y=0; y< h; y++)
-                { 
+                for (int y = 0; y < h; y++)
+                {
                     for (int x = 0; x < w; x++)
                     {
                         byte l = (byte)(0.2 * pprt[0] + 0.6 * pprt[0] + 0.1 * pprt[0]);
@@ -174,7 +174,6 @@ namespace ConsoleApp67
                 }
             }
         }
-        [Benchmark]
 
         unsafe public static void NomalParallel()
         {
@@ -194,21 +193,21 @@ namespace ConsoleApp67
                 var ppprt = ptr;
 
                 var ppp = p;
-                
+
                 Parallel.For(0, h, y =>
                 {
                     var pprt = ppprt + 4 * y * w;
                     var pp = ppp + 4 * y * w;
-                    for (int x = 0; x < w; x ++)
+                    for (int x = 0; x < w; x++)
                     {
-                        byte l = (byte)(0.2*pprt[0] +0.6* pprt[0] +0.1* pprt[0]);
+                        byte l = (byte)(0.2 * pprt[0] + 0.6 * pprt[0] + 0.1 * pprt[0]);
                         pp[0] = l;
                         pp[1] = l;
                         pp[2] = l;
                         pp += 4;
                         pprt += 4;
                     }
-                }); 
+                });
             }
         }
 
@@ -231,7 +230,7 @@ namespace ConsoleApp67
                 var ppprt = ptr;
 
                 var ppp = p;
-                int h =_y ;
+                int h = _y;
                 int w = _x;
                 Vector128<float> r = Sse.SetVector128(.333f, .333f, .333f, .333f);
                 Vector128<float> g = Sse.SetVector128(.666f, .666f, .666f, .666f);
@@ -257,7 +256,7 @@ namespace ConsoleApp67
                            var tmp7 = Sse2.ConvertToVector128Single(Sse.StaticCast<sbyte, int>(t1));
                            var tmp8 = Sse2.ConvertToVector128Single(Sse.StaticCast<sbyte, int>(t2));
 
-                          
+
                            var tmp13 = Sse.Add(Sse.Add(Sse.Multiply(tmp6, r), Sse.Multiply(tmp7, g)), Sse.Multiply(tmp8, b));
 
                            var tmp14 = Sse.StaticCast<int, sbyte>(Sse2.ConvertToVector128Int32(tmp13));
@@ -272,60 +271,8 @@ namespace ConsoleApp67
             }
         }
 
-        [Benchmark]
 
         unsafe public static void AlignmentedSIMDParallel()
-        {
-            AlignmentedArray<byte> img = new AlignmentedArray<byte>(ArraySize, 256);
-            AlignmentedArray<byte> canvus = new AlignmentedArray<byte>(ArraySize, 256);
-
-            var ptr = img.Pointer;
-          var p = canvus.Pointer;
-            { 
-                var ppprt = ptr;
-
-                var ppp = p;
-                int h = _y;
-                int w = _x;
-                Vector128<float> r = Sse.SetVector128(.333f, .333f, .333f, .333f);
-                Vector128<float> g = Sse.SetVector128(.666f, .666f, .666f, .666f);
-                Vector128<float> b = Sse.SetVector128(.112f, .112f, .112f, .112f);
-                Vector128<sbyte> maskr = Sse2.SetVector128(-1, -1, -1, 12, -1, -1, -1, 8, -1, -1, -1, 4, -1, -1, -1, 0);
-                Vector128<sbyte> maskg = Sse2.SetVector128(-1, -1, -1, 13, -1, -1, -1, 9, -1, -1, -1, 5, -1, -1, -1, 1);
-                Vector128<sbyte> maskb = Sse2.SetVector128(-1, -1, -1, 14, -1, -1, -1, 10, -1, -1, -1, 6, -1, -1, -1, 2);
-                Vector128<sbyte> maskrtn = Sse2.SetVector128(-1, 12, 12, 12, -1, 8, 8, 8, -1, 4, 4, 4, -1, 0, 0, 0);
-
-                Parallel.For(0, h, y =>
-                {
-                    var pprt = ppprt + 4 * y * w;
-                    var pp = ppp + 4 * y * w;
-                    for (int x = 0; x < w; x += 4)
-                    {
-                        var tmp0 = Sse.StaticCast<byte, sbyte>(Sse2.LoadAlignedVector128(pprt));
-
-                        var t0 = Ssse3.Shuffle(tmp0, maskr);
-                        var t1 = Ssse3.Shuffle(tmp0, maskg);
-                        var t2 = Ssse3.Shuffle(tmp0, maskb);
-
-                        var tmp6 = Sse2.ConvertToVector128Single(Sse.StaticCast<sbyte, int>(t0));
-                        var tmp7 = Sse2.ConvertToVector128Single(Sse.StaticCast<sbyte, int>(t1));
-                        var tmp8 = Sse2.ConvertToVector128Single(Sse.StaticCast<sbyte, int>(t2));
-
-
-                        var tmp13 = Sse.Add(Sse.Add(Sse.Multiply(tmp6, r), Sse.Multiply(tmp7, g)), Sse.Multiply(tmp8, b));
-
-                        var tmp14 = Sse.StaticCast<int, sbyte>(Sse2.ConvertToVector128Int32(tmp13));
-
-                        var tmp18 = Ssse3.Shuffle(tmp14, maskrtn);
-
-                        Sse2.StoreAligned(pp, Sse.StaticCast<sbyte, byte>(tmp18));
-                        pp += 16;
-                        pprt += 16;
-                    }
-                });
-            }
-        }
-        unsafe public static void AlignmentedNotmpSIMDParallel()
         {
             AlignmentedArray<byte> img = new AlignmentedArray<byte>(ArraySize, 256);
             AlignmentedArray<byte> canvus = new AlignmentedArray<byte>(ArraySize, 256);
@@ -369,15 +316,66 @@ namespace ConsoleApp67
 
                         var tmp18 = Ssse3.Shuffle(tmp14, maskrtn);
 
-                        Sse2.StoreAlignedNonTemporal(pp, Sse.StaticCast<sbyte, byte>(tmp18));
+                        Sse2.StoreAligned(pp, Sse.StaticCast<sbyte, byte>(tmp18));
                         pp += 16;
                         pprt += 16;
                     }
                 });
             }
         }
-
+       
         [Benchmark]
+        unsafe public static void AlignmentedNotmpSIMDParallel()
+        {
+
+            AlignmentedArray<byte> img = new AlignmentedArray<byte>(ArraySize, 32);
+            AlignmentedArray<byte> canvus = new AlignmentedArray<byte>(ArraySize, 32);
+
+            var ptr = img.Pointer;
+            var p = canvus.Pointer;
+            {
+                var ppprt = ptr;
+
+                var ppp = p;
+                int h = _y;
+                int w = _x;
+                Vector128<float> r = Sse.SetVector128(.333f, .333f, .333f, .333f);
+                Vector128<float> g = Sse.SetVector128(.666f, .666f, .666f, .666f);
+                Vector128<float> b = Sse.SetVector128(.112f, .112f, .112f, .112f);
+                Vector128<sbyte> maskr = Sse2.SetVector128(-1, -1, -1, 12, -1, -1, -1, 8, -1, -1, -1, 4, -1, -1, -1, 0);
+                Vector128<sbyte> maskg = Sse2.SetVector128(-1, -1, -1, 13, -1, -1, -1, 9, -1, -1, -1, 5, -1, -1, -1, 1);
+                Vector128<sbyte> maskb = Sse2.SetVector128(-1, -1, -1, 14, -1, -1, -1, 10, -1, -1, -1, 6, -1, -1, -1, 2);
+                Vector128<sbyte> maskrtn = Sse2.SetVector128(-1, 12, 12, 12, -1, 8, 8, 8, -1, 4, 4, 4, -1, 0, 0, 0);
+                Parallel.For(0, 40, i =>
+                 {
+                     sbyte* pprt = (sbyte*)ppprt + 4 * _y / 40 * i * w;
+                     sbyte* pp = (sbyte*)ppp + 4 * _y / 40 * i * w;
+                     int last = _y / 40 * i + _y / 40;
+
+                     for (int y = _y / 40 * i; y < last; y++)
+                     {
+                         for (int x = 0; x < w; x += 4)
+                         {
+                          var   tmp0 = Sse2.LoadAlignedVector128(pprt);
+                          var   t0 = Ssse3.Shuffle(tmp0, maskr);
+                          var   t1 = Ssse3.Shuffle(tmp0, maskg);
+                          var   t2 = Ssse3.Shuffle(tmp0, maskb);
+                          var   tmp6 = Sse2.ConvertToVector128Single(Sse.StaticCast<sbyte, int>(t0));
+                          var   tmp7 = Sse2.ConvertToVector128Single(Sse.StaticCast<sbyte, int>(t1));
+                          var   tmp8 = Sse2.ConvertToVector128Single(Sse.StaticCast<sbyte, int>(t2));
+                          var   tmp13 = Sse.Add(Sse.Add(Sse.Multiply(tmp6, r), Sse.Multiply(tmp7, g)), Sse.Multiply(tmp8, b));
+                          var   tmp14 = Sse.StaticCast<int, sbyte>(Sse2.ConvertToVector128Int32(tmp13));
+
+
+                             Sse2.StoreAlignedNonTemporal(pp, Ssse3.Shuffle(tmp14, maskrtn));
+                             pp += 16;
+                             pprt += 16;
+                         }
+                     }
+                 });
+            }
+        }
+    
         unsafe public static void SIMDAVXParallell()
         {
             byte[] img = new byte[ArraySize];
@@ -458,8 +456,7 @@ namespace ConsoleApp67
             }
         }
 
-        [Benchmark]
-        unsafe public static void AlignmentedSIMDAVXParallell()
+         unsafe public static void AlignmentedSIMDAVXParallell()
         {
             AlignmentedArray<byte> img = new AlignmentedArray<byte>(ArraySize, 256);
             AlignmentedArray<byte> canvus = new AlignmentedArray<byte>(ArraySize, 256);
@@ -535,8 +532,7 @@ namespace ConsoleApp67
             }
         }
 
-        [Benchmark]
-
+     
         unsafe public static void SIMD()
         {
             byte[] img = new byte[ArraySize];
